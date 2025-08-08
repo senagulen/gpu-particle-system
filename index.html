@@ -1,1 +1,44 @@
-﻿<!doctype html><meta charset="utf-8"><title>GPU Particle System</title><style>body{margin:40px;font:16px system-ui}a{font-size:20px}</style><h1>GPU Particle System — WebGL2</h1><p><a href="./webgl2/">Open the demo</a></p>
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU Particle System — WebGL2</title>
+<style>
+  :root{--bg:#0b0c10;--panel:#12151c;--text:#f5f7fa;--dim:#aab3c0;--accent:#4ecdc4}
+  *{box-sizing:border-box} body{margin:0;background:
+  radial-gradient(1000px 600px at 20% 10%, #141823 0%, #0b0c10 60%);color:var(--text);
+  font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:960px;margin:56px auto;padding:0 20px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  a.btn{display:inline-block;background:var(--accent);color:#001b1b;text-decoration:none;
+    padding:10px 14px;border-radius:10px;font-weight:600}
+  .panel{background:rgba(18,24,35,.6);border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;padding:18px 20px;margin:16px 0;backdrop-filter:blur(10px)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  h1{margin:0 0 8px 0} h2{margin:0 0 10px 0;font-size:18px} p{color:var(--dim)}
+  video, img{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
+  code{background:#0f131b;border:1px solid rgba(255,255,255,.06);padding:2px 6px;border-radius:6px}
+</style>
+<div class="wrap">
+  <header>
+    <h1>GPU Particle System — WebGL2</h1>
+    <a class="btn" href="./webgl2/">Open the live demo</a>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>What this is</h2>
+      <p>Real-time, GPU-resident particle simulation using WebGL2 <strong>Transform Feedback</strong>.
+      Position/velocity updates happen on the GPU (no per-frame CPU uploads). Includes trails, bloom, and
+      velocity-based color.</p>
+      <p><a href="./README.md">Read the full README</a></p>
+    </div>
+    <div class="panel">
+      <h2>Quick preview</h2>
+      <!-- If you upload a video or GIF, it will appear here -->
+      <video controls muted autoplay loop playsinline>
+        <source src="./assets/demo.mp4" type="video/mp4">
+      </video>
+      <!-- Or use: <img src="./assets/demo.gif" alt="Demo preview"> -->
+    </div>
+  </div>
+</div>
