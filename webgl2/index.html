@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GPU Particle System — WebGL2 TF (Styled + Bloom Controls)</title>
+<style>
+  :root{
+    --bg:#0b0c10;
+    --panel:rgba(18,20,25,.55);
+    --panel-hover:rgba(18,20,25,.75);
+    --border:rgba(255,255,255,.08);
+    --text-dim:rgba(255,255,255,.65);
+    --text:rgba(255,255,255,.92);
+    --accent:#4ecdc4;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:radial-gradient(1100px 700px at 20% 10%, #12151c 0%, #0b0c10 60%);
+    color:var(--text);font:400 14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    overflow:hidden;
+  }
+  #canvas{display:block;cursor:crosshair}
+
+  .hud{
+    position:fixed; inset:0; pointer-events:none;
+  }
+  .stack{
+    position:absolute; top:18px; left:18px; display:grid; gap:10px; pointer-events:auto;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:12px 14px; backdrop-filter: blur(10px);
+    transition:.2s background;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .card:hover{ background:var(--panel-hover); }
+
+  .title{margin:0 0 6px 0; font-size:13px; letter-spacing:.4px; color:var(--text)}
+  .muted{color:var(--text-dim); font-size:12px; margin:2px 0}
+
+  .panel{
+    position:absolute; top:18px; right:18px; width:280px; pointer-events:auto;
+    display:grid; gap:12px;
+  }
+  .row{display:grid; gap:6px}
+  label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-dim)}
+  input[type="range"], select{
+    width:100%;
+    background:transparent;
+    accent-color:var(--accent);
+  }
+  .inline{display:flex; align-items:center; gap:10px}
+  .inline span{font-variant-numeric: tabular-nums; color:var(--text-dim)}
+  .switch{display:flex; align-items:center; gap:8px}
+  .switch input{transform:translateY(1px)}
+  .meters{
+    position:absolute; bottom:18px; left:18px; display:flex; gap:10px; pointer-events:auto;
+  }
+  .pill{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:999px; padding:8px 12px; font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas;
+    color:#8ee6de;
+  }
+  .debug{
+    position:absolute; bottom:18px; right:18px; pointer-events:auto;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:8px 12px; color:#e1d68f; font:11px ui-monospace;
+    opacity:.8;
+  }
+</style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div class="hud">
+    <div class="stack">
+      <div class="card">
+        <h3 class="title">GPU Particle System</h3>
+        <div class="muted"><span id="countLabel">500</span> particles (GPU-simulated)</div>
+        <div class="muted">Move mouse to attract; click for fireworks</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="row">
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="0">Default</option>
+            <option value="1">Rain</option>
+            <option value="2">Snow</option>
+            <option value="3">Fireworks</option>
+            <option value="4">Galaxy</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Particle Count <span id="countValue" class="inline"></span></label>
+          <div class="inline">
+            <input type="range" id="particleCount" min="500" max="30000" step="500" value="500">
+            <span id="countVal">500</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Speed <span id="speedValue"></span></label>
+          <div class="inline">
+            <input type="range" id="speed" min="0.1" max="3.0" step="0.1" value="1.0">
+            <span id="speedVal">1.0</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Mouse Effect <span id="mouseValue"></span></label>
+          <div class="inline">
+            <input type="range" id="mouseEffect" min="0" max="200" value="100">
+            <span id="mouseVal">100</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 class="title">Look</h4>
+        <div class="row">
+          <label>Trails strength</label>
+          <div class="inline">
+            <input type="range" id="trail" min="0.90" max="0.995" step="0.001" value="0.965">
+            <span id="trailVal">0.965</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Point size</label>
+          <div class="inline">
+            <input type="range" id="psize" min="1" max="8" step="1" value="4">
+            <span id="psizeVal">4</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Color speed range</label>
+          <div class="inline">
+            <input type="range" id="minSpeed" min="0" max="1.0" step="0.01" value="0.0">
+            <span id="minSpVal">0.00</span>
+          </div>
+          <div class="inline">
+            <input type="range" id="maxSpeed" min="0.2" max="2.0" step="0.01" value="1.2">
+            <span id="maxSpVal">1.20</span>
+          </div>
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="bloom" checked>
+          <label for="bloom">Bloom</label>
+        </div>
+        <div class="row">
+          <label>Bloom intensity</label>
+          <div class="inline">
+            <input type="range" id="bloomIntensity" min="0.2" max="1.5" step="0.05" value="0.75">
+            <span id="bloomIntVal">0.75</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Bloom threshold</label>
+          <div class="inline">
+            <input type="range" id="bloomThreshold" min="0.10" max="0.80" step="0.01" value="0.30">
+            <span id="bloomThrVal">0.30</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="meters">
+      <div class="pill" id="fps">FPS: --</div>
+    </div>
+
+    <div class="debug" id="debug">Debug: Initializing…</div>
+  </div>
+
+<script>
+class GPUParticles {
+  constructor() {
+    this.canvas = document.getElementById('canvas');
+    this.debugEl = document.getElementById('debug');
+    this.fpsEl = document.getElementById('fps');
+    this.countLabel = document.getElementById('countLabel');
+
+    this.gl = this.canvas.getContext('webgl2', {antialias:false, preserveDrawingBuffer:false});
+    if (!this.gl) { alert('WebGL2 required. Try Chrome or Edge.'); return; }
+    const g=this.gl;
+
+    this.settings = {
+      particleCount: 500,
+      speed: 1.0,
+      mouseEffect: 100,
+      mode: 0,
+      trailDecay: 0.965,
+      bloom: true,
+      psize: 4.0,
+      colorMin: 0.0,
+      colorMax: 1.2,
+      bloomIntensity: 0.75,
+      bloomThreshold: 0.30,
+    };
+    this.maxCount = 30000;
+
+    this.mouse = {x:0, y:0};
+    this.mouseClip = {x:0, y:0};
+    this.clickClip = {x:0, y:0};
+    this.burstFrames = 0;
+
+    this.lastRAFTime = 0;
+    this.frameCount = 0; this.lastFpsStamp = 0; this.fps=0;
+
+    this.vaoUpdate = g.createVertexArray();
+    this.vaoRender = g.createVertexArray();
+
+    this.resize = this.resize.bind(this);
+    window.addEventListener('resize', this.resize);
+    this.canvas.addEventListener('mousemove', (e)=>this.onMouse(e));
+    this.canvas.addEventListener('click', (e)=>this.onClick(e));
+
+    this.init();
+  }
+
+  resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.0);
+    this.canvas.width  = Math.floor(window.innerWidth  * dpr);
+    this.canvas.height = Math.floor(window.innerHeight * dpr);
+    this.gl.viewport(0,0,this.canvas.width,this.canvas.height);
+    if (this.ready) this.buildFramebuffers();
+  }
+
+  onMouse(e){
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    this.mouseClip.x =  (x / this.canvas.width ) * 2 - 1;
+    this.mouseClip.y = -(y / this.canvas.height) * 2 + 1;
+  }
+  onClick(e){
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    this.clickClip.x = (x / this.canvas.width)*2 - 1;
+    this.clickClip.y = -(y / this.canvas.height)*2 + 1;
+    this.burstFrames = 3;
+  }
+
+  init(){
+    this.resize();
+    this.buildPrograms();
+    this.createBuffers();
+    this.buildFramebuffers();
+    this.setupControls();
+    this.ready = true;
+    requestAnimationFrame((t)=>this.loop(t));
+    this.debug('Ready');
+  }
+
+  debug(msg){ this.debugEl.textContent = 'Debug: ' + msg; }
+
+  compile(type, src){
+    const g=this.gl, sh=g.createShader(type);
+    g.shaderSource(sh, src); g.compileShader(sh);
+    if(!g.getShaderParameter(sh, g.COMPILE_STATUS)){
+      const e=g.getShaderInfoLog(sh); console.error(e, src);
+      throw new Error('Shader compile failed: ' + e);
+    }
+    return sh;
+  }
+  link(vs, fs, varyings=null){
+    const g=this.gl, p=g.createProgram();
+    g.attachShader(p, vs); g.attachShader(p, fs);
+    if (varyings) g.transformFeedbackVaryings(p, varyings, g.SEPARATE_ATTRIBS);
+    g.linkProgram(p);
+    if(!g.getProgramParameter(p, g.LINK_STATUS)){
+      const e=g.getProgramInfoLog(p); console.error(e);
+      throw new Error('Program link failed: ' + e);
+    }
+    return p;
+  }
+
+  buildPrograms(){
+    const g=this.gl;
+
+    // UPDATE with Fireworks + Galaxy
+    const updateVS = `#version 300 es
+    precision highp float;
+    layout(location=0) in vec2 a_pos;
+    layout(location=1) in vec2 a_vel;
+    layout(location=2) in float a_seed;
+
+    uniform float u_dt;
+    uniform float u_time;
+    uniform vec2  u_mouseClip;
+    uniform float u_force;
+    uniform float u_speed;
+    uniform int   u_mode;
+    uniform vec2  u_clickClip;
+    uniform float u_burst;
+
+    out vec2 v_pos;
+    out vec2 v_vel;
+
+    void main(){
+      vec2 pos = a_pos;
+      vec2 vel = a_vel;
+
+      // Mouse attract (skip during fireworks reseed)
+      if (u_mode != 3) {
+        vec2 d = u_mouseClip - pos;
+        float d2 = max(dot(d,d), 1e-4);
+        if (u_force > 0.0) vel += normalize(d) * (u_force / d2) * u_dt;
+      }
+
+      if (u_mode == 1) {
+        // Rain
+        vel.y -= 1.5 * u_speed * u_dt;
+        if (pos.y < -1.05) pos.y = 1.05;
+      } else if (u_mode == 2) {
+        // Snow
+        vel.y -= 0.4 * u_speed * u_dt;
+        vel.x += sin(u_time*0.6 + a_seed*10.0)*0.003;
+      } else if (u_mode == 3) {
+        // Fireworks
+        if (u_burst > 0.5) {
+          float angle = a_seed * 6.2831853;
+          float speed0 = 0.55 + fract(a_seed*97.3)*0.75;
+          pos = u_clickClip;
+          vel = vec2(cos(angle), sin(angle)) * speed0;
+        }
+        vel += vec2(0.0, -0.9) * u_dt; // gravity
+      } else if (u_mode == 4) {
+        // Galaxy
+        vec2 toC = -pos;
+        float r = length(toC) + 1e-4;
+        vec2 tangent = vec2(-toC.y, toC.x) / r;
+        vel += normalize(toC)*0.05*u_speed*u_dt;
+        vel += tangent*0.20*u_speed*u_dt;
+        vel -= pos * 0.02 * u_dt;
+      } else {
+        // Default swirl
+        float s = sin(pos.y*8.0 + u_time*0.8);
+        float c = cos(pos.x*8.0 - u_time*0.9);
+        vel += vec2(s, c) * 0.05 * u_speed * u_dt;
+      }
+
+      vel *= 0.995;
+      pos += vel * u_dt;
+      pos = clamp(pos, vec2(-1.15), vec2(1.15));
+
+      v_pos = pos;
+      v_vel = vel;
+    }`;
+
+    const passthroughFS = `#version 300 es
+    precision mediump float;
+    out vec4 o; void main(){ o=vec4(0.0); }`;
+
+    const vsUpdate = this.compile(g.VERTEX_SHADER, updateVS);
+    const fsUpdate = this.compile(g.FRAGMENT_SHADER, passthroughFS);
+    this.updateProgram = this.link(vsUpdate, fsUpdate, ["v_pos","v_vel"]);
+    this.up_loc = {
+      u_dt: g.getUniformLocation(this.updateProgram, "u_dt"),
+      u_time: g.getUniformLocation(this.updateProgram, "u_time"),
+      u_mouseClip: g.getUniformLocation(this.updateProgram, "u_mouseClip"),
+      u_force: g.getUniformLocation(this.updateProgram, "u_force"),
+      u_speed: g.getUniformLocation(this.updateProgram, "u_speed"),
+      u_mode: g.getUniformLocation(this.updateProgram, "u_mode"),
+      u_clickClip: g.getUniformLocation(this.updateProgram, "u_clickClip"),
+      u_burst: g.getUniformLocation(this.updateProgram, "u_burst")
+    };
+
+    // RENDER: position + velocity → speed-based color with tunable range
+    const renderVS = `#version 300 es
+    precision highp float;
+    layout(location=0) in vec2 a_pos;
+    layout(location=1) in vec2 a_vel;
+    out float v_speed;
+    uniform float u_pointSize;
+    void main(){
+      gl_Position = vec4(a_pos, 0.0, 1.0);
+      gl_PointSize = u_pointSize;
+      v_speed = length(a_vel);
+    }`;
+    const renderFS = `#version 300 es
+    precision mediump float;
+    in float v_speed;
+    uniform float u_minSpeed;
+    uniform float u_maxSpeed;
+    out vec4 outColor;
+
+    // Smooth cinematic gradient: deep blue → cyan → soft yellow → white
+    vec3 palette(float t){
+      vec3 c1 = vec3(0.16,0.28,0.98);   // deep blue
+      vec3 c2 = vec3(0.00,0.95,1.00);   // cyan
+      vec3 c3 = vec3(1.00,0.95,0.30);   // soft yellow
+      vec3 c4 = vec3(1.00,1.00,1.00);   // white
+      vec3 c = mix(c1, c2, smoothstep(0.00,0.35,t));
+      c = mix(c, c3, smoothstep(0.25,0.80,t));
+      c = mix(c, c4, smoothstep(0.80,1.00,t));
+      // subtle filmic curve
+      c = pow(c, vec3(0.95));
+      return c;
+    }
+
+    void main(){
+      vec2 pc = gl_PointCoord - vec2(0.5);
+      float d = length(pc);
+      if (d > 0.5) discard;
+      float glow = smoothstep(0.5, 0.0, d);
+
+      // remap speed to 0..1 with user tunables
+      float t = clamp((v_speed - u_minSpeed) / max(u_maxSpeed - u_minSpeed, 1e-3), 0.0, 1.0);
+      vec3 col = palette(t);
+      outColor = vec4(col * glow, glow);
+    }`;
+    const vsRender = this.compile(g.VERTEX_SHADER, renderVS);
+    const fsRender = this.compile(g.FRAGMENT_SHADER, renderFS);
+    this.renderProgram = this.link(vsRender, fsRender);
+    this.ren_loc = {
+      u_pointSize: g.getUniformLocation(this.renderProgram, "u_pointSize"),
+      u_minSpeed:  g.getUniformLocation(this.renderProgram, "u_minSpeed"),
+      u_maxSpeed:  g.getUniformLocation(this.renderProgram, "u_maxSpeed")
+    };
+
+    // Fullscreen passes (trails / bloom)
+    const fsQuadVS = `#version 300 es
+    precision highp float;
+    out vec2 v_uv;
+    void main(){
+      vec2 pos = vec2((gl_VertexID<<1)&2, gl_VertexID&2);
+      v_uv = pos;
+      gl_Position = vec4(pos*2.0-1.0, 0.0, 1.0);
+    }`;
+
+    const fsDecay = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_tex;
+    uniform float u_decay;
+    void main(){ o = texture(u_tex, v_uv) * u_decay; }`;
+
+    const fsCopy = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_tex;
+    void main(){ o = texture(u_tex, v_uv); }`;
+
+    const fsThreshold = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_tex;
+    uniform float u_threshold;
+    void main(){
+      vec3 c = texture(u_tex, v_uv).rgb;
+      float l = max(max(c.r,c.g), c.b);
+      vec3 thr = l > u_threshold ? c : vec3(0.0);
+      o = vec4(thr, 1.0);
+    }`;
+
+    const fsBlurH = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_tex;
+    uniform vec2 u_texel;
+    void main(){
+      vec2 dx = vec2(u_texel.x, 0.0);
+      vec4 s = texture(u_tex, v_uv-2.0*dx)*0.1216 +
+               texture(u_tex, v_uv-1.0*dx)*0.2333 +
+               texture(u_tex, v_uv)*0.2904 +
+               texture(u_tex, v_uv+1.0*dx)*0.2333 +
+               texture(u_tex, v_uv+2.0*dx)*0.1216;
+      o = s;
+    }`;
+
+    const fsBlurV = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_tex;
+    uniform vec2 u_texel;
+    void main(){
+      vec2 dy = vec2(0.0, u_texel.y);
+      vec4 s = texture(u_tex, v_uv-2.0*dy)*0.1216 +
+               texture(u_tex, v_uv-1.0*dy)*0.2333 +
+               texture(u_tex, v_uv)*0.2904 +
+               texture(u_tex, v_uv+1.0*dy)*0.2333 +
+               texture(u_tex, v_uv+2.0*dy)*0.1216;
+      o = s;
+    }`;
+
+    const fsComposite = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D u_scene;
+    uniform sampler2D u_bloom;
+    uniform float u_intensity;
+    void main(){
+      vec3 base = texture(u_scene, v_uv).rgb;
+      vec3 glow = texture(u_bloom, v_uv).rgb * u_intensity;
+      o = vec4(base + glow, 1.0);
+    }`;
+
+    const vq = this.compile(g.VERTEX_SHADER, fsQuadVS);
+    this.progDecay = this.link(vq, this.compile(g.FRAGMENT_SHADER, fsDecay));
+    this.progCopy  = this.link(vq, this.compile(g.FRAGMENT_SHADER, fsCopy));
+    this.progThresh= this.link(vq, this.compile(g.FRAGMENT_SHADER, fsThreshold));
+    this.progBlurH = this.link(vq, this.compile(g.FRAGMENT_SHADER, fsBlurH));
+    this.progBlurV = this.link(vq, this.compile(g.FRAGMENT_SHADER, fsBlurV));
+    this.progComp  = this.link(vq, this.compile(g.FRAGMENT_SHADER, fsComposite));
+
+    this.locDecay = { u_tex: g.getUniformLocation(this.progDecay,'u_tex'),
+                      u_decay: g.getUniformLocation(this.progDecay,'u_decay') };
+    this.locCopy  = { u_tex: g.getUniformLocation(this.progCopy,'u_tex') };
+    this.locThresh= { u_tex: g.getUniformLocation(this.progThresh,'u_tex'),
+                      u_threshold: g.getUniformLocation(this.progThresh,'u_threshold') };
+    this.locBlurH = { u_tex: g.getUniformLocation(this.progBlurH,'u_tex'),
+                      u_texel: g.getUniformLocation(this.progBlurH,'u_texel') };
+    this.locBlurV = { u_tex: g.getUniformLocation(this.progBlurV,'u_tex'),
+                      u_texel: g.getUniformLocation(this.progBlurV,'u_texel') };
+    this.locComp  = { u_scene: g.getUniformLocation(this.progComp,'u_scene'),
+                      u_bloom: g.getUniformLocation(this.progComp,'u_bloom'),
+                      u_intensity: g.getUniformLocation(this.progComp,'u_intensity') };
+
+    this.tf = g.createTransformFeedback();
+  }
+
+  makeBuffer(data, usage){
+    const g=this.gl, b=g.createBuffer();
+    g.bindBuffer(g.ARRAY_BUFFER, b);
+    g.bufferData(g.ARRAY_BUFFER, data.byteLength, usage || g.DYNAMIC_COPY);
+    g.bufferSubData(g.ARRAY_BUFFER, 0, data);
+    return b;
+  }
+
+  createBuffers(){
+    const g=this.gl;
+    const N = this.maxCount;
+
+    const posInit = new Float32Array(N*2);
+    const velInit = new Float32Array(N*2);
+    const seed    = new Float32Array(N);
+    for(let i=0;i<N;i++){
+      posInit[2*i+0] = (Math.random()-0.5)*1.8;
+      posInit[2*i+1] = (Math.random()-0.5)*1.8;
+      velInit[2*i+0] = (Math.random()-0.5)*0.2;
+      velInit[2*i+1] = (Math.random()-0.5)*0.2;
+      seed[i] = Math.random();
+    }
+
+    this.buffers = [
+      { pos:this.makeBuffer(posInit, g.DYNAMIC_COPY),
+        vel:this.makeBuffer(velInit, g.DYNAMIC_COPY),
+        seed:this.makeBuffer(seed, g.STATIC_DRAW) },
+      { pos:this.makeBuffer(new Float32Array(N*2), g.DYNAMIC_COPY),
+        vel:this.makeBuffer(new Float32Array(N*2), g.DYNAMIC_COPY),
+        seed:this.makeBuffer(seed, g.STATIC_DRAW) }
+    ];
+    this.src=0; this.dst=1;
+
+    this.activeCount = this.settings.particleCount;
+    document.getElementById('countVal').textContent = this.activeCount;
+    this.countLabel.textContent = this.activeCount;
+  }
+
+  buildFramebuffers(){
+    const g=this.gl;
+    const w = this.canvas.width, h = this.canvas.height;
+    const hw = Math.max(1, w>>1), hh=Math.max(1, h>>1);
+
+    const mkTex = (w,h,linear=true)=>{
+      const t = g.createTexture();
+      g.bindTexture(g.TEXTURE_2D, t);
+      g.texImage2D(g.TEXTURE_2D, 0, g.RGBA8, w, h, 0, g.RGBA, g.UNSIGNED_BYTE, null);
+      g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, linear?g.LINEAR:g.NEAREST);
+      g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, linear?g.LINEAR:g.NEAREST);
+      g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+      g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+      return t;
+    };
+    const mkFBO = (tex)=>{
+      const f = g.createFramebuffer();
+      g.bindFramebuffer(g.FRAMEBUFFER, f);
+      g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, tex, 0);
+      return f;
+    };
+
+    this.trailA = mkTex(w,h,true);
+    this.trailB = mkTex(w,h,true);
+    this.fboTrailA = mkFBO(this.trailA);
+    this.fboTrailB = mkFBO(this.trailB);
+    this.trailWriteToA = true;
+
+    this.bright = mkTex(hw,hh,true);
+    this.blurX  = mkTex(hw,hh,true);
+    this.blurY  = mkTex(hw,hh,true);
+    this.fboBright = mkFBO(this.bright);
+    this.fboBlurX  = mkFBO(this.blurX);
+    this.fboBlurY  = mkFBO(this.blurY);
+
+    g.bindFramebuffer(g.FRAMEBUFFER, null);
+  }
+
+  bindFS(fbo, w, h){
+    const g=this.gl;
+    g.bindFramebuffer(g.FRAMEBUFFER, fbo);
+    g.viewport(0,0,w,h);
+    g.disable(g.BLEND);
+  }
+
+  updatePass(dt, timeMs){
+    const g=this.gl, src=this.buffers[this.src], dst=this.buffers[this.dst];
+
+    g.useProgram(this.updateProgram);
+    g.bindVertexArray(this.vaoUpdate);
+
+    g.bindBuffer(g.ARRAY_BUFFER, src.pos);
+    g.enableVertexAttribArray(0);
+    g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+
+    g.bindBuffer(g.ARRAY_BUFFER, src.vel);
+    g.enableVertexAttribArray(1);
+    g.vertexAttribPointer(1, 2, g.FLOAT, false, 0, 0);
+
+    g.bindBuffer(g.ARRAY_BUFFER, src.seed);
+    g.enableVertexAttribArray(2);
+    g.vertexAttribPointer(2, 1, g.FLOAT, false, 0, 0);
+
+    g.bindTransformFeedback(g.TRANSFORM_FEEDBACK, this.tf);
+    g.bindBufferBase(g.TRANSFORM_FEEDBACK_BUFFER, 0, dst.pos);
+    g.bindBufferBase(g.TRANSFORM_FEEDBACK_BUFFER, 1, dst.vel);
+
+    g.uniform1f(g.getUniformLocation(this.updateProgram,"u_dt"), dt);
+    g.uniform1f(g.getUniformLocation(this.updateProgram,"u_time"), timeMs*0.001);
+    g.uniform2f(g.getUniformLocation(this.updateProgram,"u_mouseClip"), this.mouseClip.x, this.mouseClip.y);
+    g.uniform1f(g.getUniformLocation(this.updateProgram,"u_force"), this.settings.mouseEffect*0.0005);
+    g.uniform1f(g.getUniformLocation(this.updateProgram,"u_speed"), this.settings.speed);
+    g.uniform1i(g.getUniformLocation(this.updateProgram,"u_mode"), this.settings.mode|0);
+    g.uniform2f(g.getUniformLocation(this.updateProgram,"u_clickClip"), this.clickClip.x, this.clickClip.y);
+    g.uniform1f(g.getUniformLocation(this.updateProgram,"u_burst"), this.burstFrames>0 ? 1.0 : 0.0);
+
+    g.enable(g.RASTERIZER_DISCARD);
+    g.beginTransformFeedback(g.POINTS);
+    g.drawArrays(g.POINTS, 0, this.activeCount);
+    g.endTransformFeedback();
+    g.disable(g.RASTERIZER_DISCARD);
+
+    [this.src, this.dst] = [this.dst, this.src];
+    if (this.burstFrames>0) this.burstFrames--;
+  }
+
+  renderParticles(){
+    const g=this.gl, dst=this.buffers[this.dst];
+
+    g.useProgram(this.renderProgram);
+    g.bindVertexArray(this.vaoRender);
+
+    g.bindBuffer(g.ARRAY_BUFFER, dst.pos);
+    g.enableVertexAttribArray(0);
+    g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+
+    g.bindBuffer(g.ARRAY_BUFFER, dst.vel);
+    g.enableVertexAttribArray(1);
+    g.vertexAttribPointer(1, 2, g.FLOAT, false, 0, 0);
+
+    g.enable(g.BLEND);
+    g.blendFunc(g.SRC_ALPHA, g.ONE);
+
+    g.uniform1f(this.ren_loc.u_pointSize, this.settings.psize);
+    g.uniform1f(this.ren_loc.u_minSpeed, this.settings.colorMin);
+    g.uniform1f(this.ren_loc.u_maxSpeed, this.settings.colorMax);
+
+    g.drawArrays(g.POINTS, 0, this.activeCount);
+  }
+
+  loop(t){
+    const g=this.gl;
+    const dt = this.lastRAFTime ? Math.min((t - this.lastRAFTime)/1000, 0.033) : 0.016;
+    this.lastRAFTime = t;
+
+    // Update simulation
+    this.updatePass(dt, t);
+
+    // Trails
+    const w=this.canvas.width, h=this.canvas.height, hw=Math.max(1,w>>1), hh=Math.max(1,h>>1);
+    const srcTrailTex = this.trailWriteToA ? this.trailA : this.trailB;
+    const dstTrailFBO = this.trailWriteToA ? this.fboTrailB : this.fboTrailA;
+
+    this.bindFS(dstTrailFBO, w, h);
+    g.useProgram(this.progDecay);
+    g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, srcTrailTex);
+    g.uniform1i(this.locDecay.u_tex, 0);
+    g.uniform1f(this.locDecay.u_decay, this.settings.trailDecay);
+    g.drawArrays(g.TRIANGLES, 0, 3);
+
+    // Add particles into trail
+    g.bindFramebuffer(g.FRAMEBUFFER, dstTrailFBO);
+    g.viewport(0,0,w,h);
+    this.renderParticles();
+
+    this.trailWriteToA = !this.trailWriteToA;
+    const sceneTex = this.trailWriteToA ? this.trailB : this.trailA;
+
+    // Bloom
+    if (this.settings.bloom){
+      // bright threshold
+      this.bindFS(this.fboBright, hw, hh);
+      g.useProgram(this.progThresh);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, sceneTex);
+      g.uniform1i(this.locThresh.u_tex, 0);
+      g.uniform1f(this.locThresh.u_threshold, this.settings.bloomThreshold);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+
+      // blur h
+      this.bindFS(this.fboBlurX, hw, hh);
+      g.useProgram(this.progBlurH);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, this.bright);
+      g.uniform1i(this.locBlurH.u_tex, 0);
+      g.uniform2f(this.locBlurH.u_texel, 1.0/hw, 1.0/hh);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+
+      // blur v
+      this.bindFS(this.fboBlurY, hw, hh);
+      g.useProgram(this.progBlurV);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, this.blurX);
+      g.uniform1i(this.locBlurV.u_tex, 0);
+      g.uniform2f(this.locBlurV.u_texel, 1.0/hw, 1.0/hh);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+
+      // composite → screen
+      g.bindFramebuffer(g.FRAMEBUFFER, null);
+      g.viewport(0,0,w,h);
+      g.disable(g.BLEND);
+      g.useProgram(this.progComp);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, sceneTex);
+      g.uniform1i(this.locComp.u_scene, 0);
+      g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, this.blurY);
+      g.uniform1i(this.locComp.u_bloom, 1);
+      g.uniform1f(this.locComp.u_intensity, this.settings.bloomIntensity);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+    } else {
+      // copy trails to screen
+      g.bindFramebuffer(g.FRAMEBUFFER, null);
+      g.viewport(0,0,w,h);
+      g.disable(g.BLEND);
+      g.useProgram(this.progCopy);
+      g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, sceneTex);
+      g.uniform1i(this.locCopy.u_tex, 0);
+      g.drawArrays(g.TRIANGLES, 0, 3);
+    }
+
+    // FPS
+    this.frameCount++;
+    if (t - this.lastFpsStamp >= 1000){
+      this.fps = this.frameCount; this.frameCount=0; this.lastFpsStamp=t;
+      this.fpsEl.textContent = `FPS: ${this.fps}`;
+    }
+    requestAnimationFrame((tt)=>this.loop(tt));
+  }
+
+  setupControls(){
+    const $ = (id)=>document.getElementById(id);
+    const upd = ()=>{ /* noop; values reflected live */ };
+
+    $('mode').addEventListener('change', e=>{
+      this.settings.mode = parseInt(e.target.value,10);
+    });
+    $('particleCount').addEventListener('input', e=>{
+      const val = parseInt(e.target.value,10);
+      this.activeCount = Math.min(val, this.maxCount);
+      $('countVal').textContent = this.activeCount;
+      this.countLabel.textContent = this.activeCount;
+    });
+    $('speed').addEventListener('input', e=>{
+      this.settings.speed = parseFloat(e.target.value);
+      $('speedVal').textContent = e.target.value;
+    });
+    $('mouseEffect').addEventListener('input', e=>{
+      this.settings.mouseEffect = parseInt(e.target.value,10);
+      $('mouseVal').textContent = e.target.value;
+    });
+    $('trail').addEventListener('input', e=>{
+      this.settings.trailDecay = parseFloat(e.target.value);
+      $('trailVal').textContent = e.target.value;
+    });
+    $('psize').addEventListener('input', e=>{
+      this.settings.psize = parseFloat(e.target.value);
+      $('psizeVal').textContent = e.target.value;
+    });
+    $('minSpeed').addEventListener('input', e=>{
+      this.settings.colorMin = parseFloat(e.target.value);
+      $('minSpVal').textContent = e.target.value;
+    });
+    $('maxSpeed').addEventListener('input', e=>{
+      this.settings.colorMax = parseFloat(e.target.value);
+      $('maxSpVal').textContent = e.target.value;
+    });
+    $('bloom').addEventListener('change', e=>{
+      this.settings.bloom = e.target.checked;
+    });
+    $('bloomIntensity').addEventListener('input', e=>{
+      this.settings.bloomIntensity = parseFloat(e.target.value);
+      $('bloomIntVal').textContent = e.target.value;
+    });
+    $('bloomThreshold').addEventListener('input', e=>{
+      this.settings.bloomThreshold = parseFloat(e.target.value);
+      $('bloomThrVal').textContent = e.target.value;
+    });
+  }
+}
+
+window.addEventListener('load', ()=> new GPUParticles());
+</script>
+</body>
+</html>
