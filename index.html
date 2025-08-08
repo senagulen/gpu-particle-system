@@ -1,44 +1,89 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPU Particle System — WebGL2</title>
 <style>
-  :root{--bg:#0b0c10;--panel:#12151c;--text:#f5f7fa;--dim:#aab3c0;--accent:#4ecdc4}
-  *{box-sizing:border-box} body{margin:0;background:
-  radial-gradient(1000px 600px at 20% 10%, #141823 0%, #0b0c10 60%);color:var(--text);
-  font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  .wrap{max-width:960px;margin:56px auto;padding:0 20px}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
-  a.btn{display:inline-block;background:var(--accent);color:#001b1b;text-decoration:none;
-    padding:10px 14px;border-radius:10px;font-weight:600}
-  .panel{background:rgba(18,24,35,.6);border:1px solid rgba(255,255,255,.08);
-    border-radius:14px;padding:18px 20px;margin:16px 0;backdrop-filter:blur(10px)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  h1{margin:0 0 8px 0} h2{margin:0 0 10px 0;font-size:18px} p{color:var(--dim)}
-  video, img{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
-  code{background:#0f131b;border:1px solid rgba(255,255,255,.06);padding:2px 6px;border-radius:6px}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+  body {
+    margin: 0;
+    background: black url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
+    font-family: 'Inter', sans-serif;
+    color: white;
+    text-align: center;
+  }
+  header {
+    padding-top: 80px;
+  }
+  h1 {
+    font-size: 64px;
+    margin: 0;
+    font-weight: 700;
+  }
+  h2 {
+    font-weight: 400;
+    font-size: 18px;
+    color: #ccc;
+    margin-top: 8px;
+  }
+  .video-wrapper {
+    margin: 40px auto;
+    max-width: 900px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  video {
+    width: 100%;
+    display: block;
+  }
+  .demo-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 24px;
+    background: white;
+    color: black;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 999px;
+    transition: background 0.3s;
+  }
+  .demo-link:hover {
+    background: #ccc;
+  }
+  footer {
+    margin-top: 60px;
+    font-size: 14px;
+    color: #aaa;
+  }
+  .dot {
+    color: red;
+    font-size: 18px;
+    vertical-align: middle;
+  }
 </style>
-<div class="wrap">
-  <header>
-    <h1>GPU Particle System — WebGL2</h1>
-    <a class="btn" href="./webgl2/">Open the live demo</a>
-  </header>
+</head>
+<body>
 
-  <div class="grid">
-    <div class="panel">
-      <h2>What this is</h2>
-      <p>Real-time, GPU-resident particle simulation using WebGL2 <strong>Transform Feedback</strong>.
-      Position/velocity updates happen on the GPU (no per-frame CPU uploads). Includes trails, bloom, and
-      velocity-based color.</p>
-      <p><a href="./README.md">Read the full README</a></p>
-    </div>
-    <div class="panel">
-      <h2>Quick preview</h2>
-      <!-- If you upload a video or GIF, it will appear here -->
-      <video controls muted autoplay loop playsinline>
-        <source src="./assets/demo.mp4" type="video/mp4">
-      </video>
-      <!-- Or use: <img src="./assets/demo.gif" alt="Demo preview"> -->
-    </div>
-  </div>
+<header>
+  <div style="font-size:40px;">✨</div>
+  <h1>GPU Particle System</h1>
+  <h2>⚝ turn ideas into reality ⚝</h2>
+</header>
+
+<div class="video-wrapper">
+  <video controls autoplay muted loop>
+    <source src="./assets/demo.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
 </div>
+
+<a class="demo-link" href="./webgl2/">Open the Live Demo</a>
+
+<footer>
+  GPU Particle System 2025 is live <span class="dot">●</span>
+</footer>
+
+</body>
+</html>
+
