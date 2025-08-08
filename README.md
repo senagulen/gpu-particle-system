@@ -7,6 +7,7 @@ A real-time particle simulation where **position and velocity are updated fully 
 No per-frame CPU uploads — all physics and rendering remain GPU-resident.  
 Visual polish includes **velocity-based color**, **temporal trails**, and **bloom post-processing**.
 
+
 **Tech Stack:** JavaScript (ES6), WebGL2, GLSL, HTML/CSS
 
 ---
@@ -79,5 +80,6 @@ Clone the repo and open `webgl2/index.html` in Chrome/Edge/Firefox.
 
 ## Keywords
 WebGL2, Transform Feedback, Ping-Pong Buffers, GPU-Resident Simulation, Additive Blending, Trails, Bloom, Intel Arc A370M
+
 
 
